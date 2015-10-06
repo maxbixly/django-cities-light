@@ -15,6 +15,7 @@ import progressbar
 
 from django.core.management.base import BaseCommand
 from django.db import transaction, reset_queries
+from django.db.utils import IntegrityError
 from django.utils.encoding import force_unicode
 
 from ...exceptions import *
@@ -201,7 +202,7 @@ It is possible to force the import of files which weren't downloaded using the
 
         if region_id not in self._region_codes[country_id]:
             self._region_codes[country_id][region_id] = Region.objects.get(
-                country_id=country_id, geoname_code=region_id).pk
+                country=country_id, geoname_code=region_id).pk
 
         return self._region_codes[country_id][region_id]
 
@@ -251,7 +252,7 @@ It is possible to force the import of files which weren't downloaded using the
             kwargs = dict(geoname_id=geoname_id)
         else:
             kwargs = dict(name=name,
-                country_id=country_id)
+                country=country_id)
 
         save = False
         try:
@@ -268,7 +269,7 @@ It is possible to force the import of files which weren't downloaded using the
             save = True
 
         if not region.country_id:
-            region.country_id = country_id
+            region.country = country_id
             save = True
 
         if not region.geoname_code:
@@ -282,7 +283,10 @@ It is possible to force the import of files which weren't downloaded using the
         region.geoname_id = geoname_id
 
         if save:
-            region.save()
+            try:
+                region.save()
+            except IntegrityError, ie:
+                self.logger.warning(ie)
 
     def verify_city_import(self, geonames):
         for items in geonames.parse():
@@ -326,8 +330,8 @@ It is possible to force the import of files which weren't downloaded using the
 
         try:
             kwargs = dict(name=force_unicode(name),
-                region_id=region_id,
-                country_id=country_id)
+                region=region_id,
+                country=country_id)
         except Country.DoesNotExist:
             if self.noinsert:
                 return
@@ -341,8 +345,8 @@ It is possible to force the import of files which weren't downloaded using the
             try:
                 city = City.objects.get(geoname_id=geoname_id)
                 city.name = force_unicode(name)
-                city.country_id = country_id
-                city.region_id = region_id
+                city.country = country_id
+                city.region = region_id
                 save = True
             except City.DoesNotExist:
                 if self.noinsert:
