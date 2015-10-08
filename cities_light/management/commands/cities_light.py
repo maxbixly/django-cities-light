@@ -268,8 +268,8 @@ It is possible to force the import of files which weren't downloaded using the
             region.name = name
             save = True
 
-        if not region.country_id:
-            region.country = country_id
+        if not region.country:
+            region.country = Country.objects.get(id=country_id)
             save = True
 
         if not region.geoname_code:
@@ -345,8 +345,8 @@ It is possible to force the import of files which weren't downloaded using the
             try:
                 city = City.objects.get(geoname_id=geoname_id)
                 city.name = force_unicode(name)
-                city.country = country_id
-                city.region = region_id
+                city.country = Country.objects.get(id=country_id)
+                city.region = Region.objects.get(id=region_id)
                 save = True
             except City.DoesNotExist:
                 if self.noinsert:
