@@ -268,7 +268,9 @@ It is possible to force the import of files which weren't downloaded using the
             region.name = name
             save = True
 
-        if not region.country:
+        try:
+            region.country
+        except Country.DoesNotExist:
             region.country = Country.objects.get(id=country_id)
             save = True
 
@@ -328,11 +330,18 @@ It is possible to force the import of files which weren't downloaded using the
             else:
                 region_id = None
 
+        self.logger.debug('### country_id: %s' % country_id)
+        self.logger.debug('### region_id: %s' % region_id)
         try:
-            kwargs = dict(name=force_unicode(name),
-                region=region_id,
-                country=country_id)
-        except Country.DoesNotExist:
+            kwargs = dict(name=force_unicode(name))
+
+            if country_id is not None:
+                kwargs['country'] = Country.objects.get(id=country_id)
+
+            if region_id is not None:
+                kwargs['region'] = Region.objects.get(id=region_id)
+        except Exception, e:
+            self.logger.debug('### Exception: %s' % e)
             if self.noinsert:
                 return
             else:
